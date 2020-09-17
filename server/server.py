@@ -1,7 +1,7 @@
 #!/usr/bin/python3
-#
-# thanhle Bluetooth keyboard/Mouse emulator DBUS Service
-#
+"""
+KMPi Bluetooth Keyboard/Mouse Emulator DBUS Service
+"""
 
 from __future__ import absolute_import, print_function
 from optparse import OptionParser, make_option
@@ -21,10 +21,10 @@ from logging import debug, info, warning, error
 logging.basicConfig(level=logging.DEBUG)
 
 
-class BTKbDevice():
+class KMPiDevice():
     # change these constants
-    MY_ADDRESS = "E4:A7:A0:E0:0E:97"
-    MY_DEV_NAME = "ThanhLe_Keyboard_Mouse"
+    MY_ADDRESS = "DC:A6:32:78:D1:C4"
+    MY_DEV_NAME = "KMPi"
 
     # define some constants
     P_CTRL = 17  # Service port - must match port configured in SDP record
@@ -35,17 +35,17 @@ class BTKbDevice():
     UUID = "00001124-0000-1000-8000-00805f9b34fb"
 
     def __init__(self):
-        print("2. Setting up BT device")
+        print("2. Setting up bluetooth device")
         self.init_bt_device()
         self.init_bluez_profile()
 
     # configure the bluetooth hardware device
     def init_bt_device(self):
-        print("3. Configuring Device name " + BTKbDevice.MY_DEV_NAME)
+        print("3. Configuring Device name " + KMPiDevice.MY_DEV_NAME)
         # set the device class to a keybord and set the name
         os.system("hciconfig hci0 up")
         os.system("hciconfig hci0 class 0x0025C0")
-        os.system("hciconfig hci0 name " + BTKbDevice.MY_DEV_NAME)
+        os.system("hciconfig hci0 name " + KMPiDevice.MY_DEV_NAME)
         # make the device discoverable
         os.system("hciconfig hci0 piscan")
 
@@ -62,14 +62,14 @@ class BTKbDevice():
         bus = dbus.SystemBus()
         manager = dbus.Interface(bus.get_object(
             "org.bluez", "/org/bluez"), "org.bluez.ProfileManager1")
-        manager.RegisterProfile("/org/bluez/hci0", BTKbDevice.UUID, opts)
+        manager.RegisterProfile("/org/bluez/hci0", KMPiDevice.UUID, opts)
         print("6. Profile registered ")
 
     # read and return an sdp record from a file
     def read_sdp_service_record(self):
         print("5. Reading service record")
         try:
-            fh = open(BTKbDevice.SDP_RECORD_PATH, "r")
+            fh = open(KMPiDevice.SDP_RECORD_PATH, "r")
         except:
             sys.exit("Could not open the sdp record. Exiting...")
         return fh.read()
@@ -107,21 +107,21 @@ class BTKbDevice():
             error(err)
 
 
-class BTKbService(dbus.service.Object):
+class KMPiService(dbus.service.Object):
 
     def __init__(self):
         print("1. Setting up service")
         # set up as a dbus service
         bus_name = dbus.service.BusName(
-            "org.thanhle.btkbservice", bus=dbus.SystemBus())
+            "org.kmpi.BluetoothKM", bus=dbus.SystemBus())
         dbus.service.Object.__init__(
-            self, bus_name, "/org/thanhle/btkbservice")
+            self, bus_name, "/org/kmpi/BluetoothKM")
         # create and setup our device
-        self.device = BTKbDevice()
+        self.device = KMPiDevice()
         # start listening for connections
         self.device.listen()
 
-    @dbus.service.method('org.thanhle.btkbservice', in_signature='yay')
+    @dbus.service.method('org.kmpi.BluetoothKM', in_signature='yay')
     def send_keys(self, modifier_byte, keys):
         print("Get send_keys request through dbus")
         print("key msg: ", keys)
@@ -134,7 +134,7 @@ class BTKbService(dbus.service.Object):
             count += 1
         self.device.send_string(state)
 
-    @dbus.service.method('org.thanhle.btkbservice', in_signature='yay')
+    @dbus.service.method('org.kmpi.BluetoothKM', in_signature='yay')
     def send_mouse(self, modifier_byte, keys):
         state = [0xA1, 2, 0, 0, 0, 0]
         count = 2
@@ -145,15 +145,14 @@ class BTKbService(dbus.service.Object):
         self.device.send_string(state)
 
 
-# main routine
 if __name__ == "__main__":
-    # we an only run as root
+    # only run as root
     try:
         if not os.geteuid() == 0:
             sys.exit("Only root can run this script")
 
         DBusGMainLoop(set_as_default=True)
-        myservice = BTKbService()
+        kmpi_service = KMPiService()
         loop = GLib.MainLoop()
         loop.run()
     except KeyboardInterrupt:

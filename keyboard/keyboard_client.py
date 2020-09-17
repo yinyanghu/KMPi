@@ -1,9 +1,10 @@
 #!/usr/bin/python3
-#
-# Thanhle Bluetooth keyboard emulation service
-# keyboard copy client.
-# Reads local key events and forwards them to the btk_server DBUS service
-#
+
+"""
+KMPi Bluetooth Keyboard Emulation Service
+keyboard copy client.
+Reads local key events and forwards them to the server DBUS service
+"""
 import os  # used to all external commands
 import sys  # used to exit the script
 import dbus
@@ -17,10 +18,8 @@ import keymap  # used to map evdev input to hid keodes
 
 # Define a client to listen to local key events
 class Keyboard():
-
     def __init__(self):
-        # the structure for a bt keyboard input report (size is 10 bytes)
-
+        # the structure for a bluetooth keyboard input report (size is 10 bytes)
         self.state = [
             0xA1,  # this is an input report
             0x01,  # Usage report = Keyboard
@@ -41,13 +40,13 @@ class Keyboard():
             0x00,
             0x00]
 
-        print("setting up DBus Client")
+        print("Setting up DBus Client")
 
         self.bus = dbus.SystemBus()
-        self.btkservice = self.bus.get_object(
-            'org.thanhle.btkbservice', '/org/thanhle/btkbservice')
-        self.iface = dbus.Interface(self.btkservice, 'org.thanhle.btkbservice')
-        print("waiting for keyboard")
+        self.service = self.bus.get_object(
+            'org.kmpi.BluetoothKM', '/org/kmpi/BluetoothKM')
+        self.iface = dbus.Interface(self.service, 'org.kmpi.BluetoothKM')
+        print("Waiting for keyboard...")
         # keep trying to key a keyboard
         have_dev = False
         while have_dev == False:
@@ -57,9 +56,9 @@ class Keyboard():
                 self.dev = InputDevice("/dev/input/event0")
                 have_dev = True
             except OSError:
-                print("Keyboard not found, waiting 3 seconds and retrying")
+                print("Keyboard not found, waiting 3 seconds and retrying...")
                 time.sleep(3)
-            print("found a keyboard")
+            print("Found a keyboard!")
 
     def change_state(self, event):
         evdev_code = ecodes.KEY[event.code]
@@ -103,10 +102,7 @@ class Keyboard():
 
 
 if __name__ == "__main__":
-
     print("Setting up keyboard")
-
     kb = Keyboard()
-
-    print("starting event loop")
+    print("Starting event loop")
     kb.event_loop()
